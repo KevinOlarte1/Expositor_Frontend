@@ -1,53 +1,49 @@
 import 'package:flutter/material.dart';
 import '../models/cliente.dart';
-import '../pages/cliente_detail_page.dart';
 
-class ClienteCard extends StatelessWidget {
+class ClientCard extends StatelessWidget {
   final Cliente cliente;
 
-  const ClienteCard({Key? key, required this.cliente}) : super(key: key);
+  const ClientCard({super.key, required this.cliente});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ClienteDetailPage(cliente: cliente),
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: Color(0xFF2b2b2b),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Colors.blue,
+          child: Text(
+            cliente.nombre[0].toUpperCase(),
+            style: const TextStyle(color: Colors.white),
           ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
-            ),
-          ],
         ),
-        child: Row(
-          children: [
-            const Icon(Icons.person, size: 40, color: Colors.black54),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                cliente.nombre,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            const Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey),
-          ],
+        title: Text(
+          cliente.nombre,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
+        subtitle: Text(
+          "COD: ${cliente.id}",
+          style: const TextStyle(color: Colors.grey, fontSize: 12),
+        ),
+        // 🔹 En vez de la flecha, mostramos pedidos
+        trailing: Text(
+          "pedidos: ${cliente.idPedidos.length}",
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        onTap: () {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("Cliente: ${cliente.nombre}")));
+        },
       ),
     );
   }

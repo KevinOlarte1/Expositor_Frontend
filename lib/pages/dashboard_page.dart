@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-
 import '../service/api_service.dart';
 import '../models/vendedor.dart';
 import '../models/cliente.dart';
@@ -8,13 +6,12 @@ import '../widgets/custom_app_bar.dart';
 import '../widgets/stats_card.dart';
 import '../widgets/button/custom_action_button.dart';
 import '../widgets/cliente_card.dart';
-import '../utils/session_manager.dart'; // ✅ Import para la sesión global
 import 'stats_detail_page.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class DashboardPage extends StatelessWidget {
   final ApiService api = ApiService();
-  static const int idVendedor =
-      1; // 🔹 ID por defecto (puedes cambiarlo si usas login)
+  static const int idVendedor = 1; // 🔹 vendedor por defecto
 
   @override
   Widget build(BuildContext context) {
@@ -34,12 +31,6 @@ class DashboardPage extends StatelessWidget {
 
             final vendedor = snapshot.data!;
 
-            // ✅ Guardamos el vendedor globalmente al cargar el dashboard
-            SessionManager.setVendedor(
-              id: vendedor.id,
-              nombre: vendedor.nombre,
-            );
-
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -49,7 +40,7 @@ class DashboardPage extends StatelessWidget {
                   avatarUrl: "https://cdn.pfps.gg/pfps/2903-default-blue.png",
                 ),
 
-                // 🔹 Tarjeta de estadísticas
+                // 🔹 Stats
                 StatsCard(
                   total: 276,
                   ventasAbiertas: 374,
@@ -102,7 +93,7 @@ class DashboardPage extends StatelessWidget {
                       ),
                       GestureDetector(
                         onTap: () {
-                          // Acción para añadir cliente
+                          // Aquí pones la acción para añadir cliente
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text("Acción: Añadir cliente ➕"),
@@ -140,11 +131,10 @@ class DashboardPage extends StatelessWidget {
                       }
 
                       final clientes = snapshot.data!;
-
                       return ListView.builder(
                         itemCount: clientes.length,
                         itemBuilder: (context, index) {
-                          return ClienteCard(cliente: clientes[index]);
+                          return ClientCard(cliente: clientes[index]);
                         },
                       );
                     },

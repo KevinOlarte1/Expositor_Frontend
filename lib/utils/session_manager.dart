@@ -1,18 +1,22 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 class SessionManager {
-  static String? vendedorNombre;
-  static int? vendedorId;
-  static String? token;
+  static const _storage = FlutterSecureStorage();
 
-  static void setVendedor({required int id, required String nombre}) {
-    vendedorId = id;
-    vendedorNombre = nombre;
+  static Future<void> saveToken(String token) async {
+    await _storage.write(key: 'access_token', value: token);
   }
 
-  static void clearSession() {
-    vendedorId = null;
-    vendedorNombre = null;
-    token = null;
+  static Future<String?> getToken() async {
+    return await _storage.read(key: 'access_token');
   }
 
-  static bool get isLoggedIn => vendedorId != null;
+  static Future<void> clearSession() async {
+    await _storage.deleteAll();
+  }
+
+  static Future<bool> isLoggedIn() async {
+    final token = await getToken();
+    return token != null;
+  }
 }
