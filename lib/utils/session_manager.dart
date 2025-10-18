@@ -19,4 +19,8 @@ class SessionManager {
     final token = await getToken();
     return token != null;
   }
+
+  static int getIdVendedro() {
+    return 1;
+  }
 }

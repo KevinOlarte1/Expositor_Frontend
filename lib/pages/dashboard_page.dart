@@ -7,12 +7,14 @@ import '../widgets/custom_app_bar.dart';
 import '../widgets/stats_card.dart';
 import '../widgets/button/custom_action_button.dart';
 import '../widgets/cliente_card.dart';
+import '../utils/session_manager.dart';
 
 /// Página principal del Dashboard.
 /// Muestra el vendedor, estadísticas y la lista de clientes.
 class DashboardPage extends StatelessWidget {
   final ApiService api = ApiService();
-  static const int idVendedor = 1; // 🔹 Vendedor por defecto
+
+  final int idVendedor = SessionManager.getIdVendedro();
 
   DashboardPage({super.key}); // 🔸 sin const
 
