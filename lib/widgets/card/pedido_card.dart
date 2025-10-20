@@ -11,6 +11,7 @@ class PedidoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     print(pedido);
     return Card(
+      color: Colors.white,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

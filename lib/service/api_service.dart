@@ -58,7 +58,45 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final List<dynamic> body = json.decode(response.body);
-      return body.map((json) => Pedido.fromJson(json)).toList();
+      final List<Pedido> pedidos = body
+          .map((json) => Pedido.fromJson(json))
+          .toList();
+
+      for (var pedido in pedidos) {
+        try {
+          // Si el pedido no tiene IDs de línea, marcamos total como null directamente
+          if (pedido.idLineaPedido.isEmpty) {
+            pedido.total = null;
+            print("Pedido ${pedido.id} sin líneas → total = null");
+            continue;
+          }
+
+          final lineas = await getLineasPedido(
+            idVendedor: idVendedor,
+            idCliente: idCliente,
+            idPedido: pedido.id,
+          );
+
+          if (lineas.isEmpty) {
+            pedido.total = null;
+            print("Pedido ${pedido.id} (sin líneas en API) → total = null");
+          } else {
+            double total = 0;
+            for (var linea in lineas) {
+              total += (linea.precio ?? 0) * (linea.cantidad ?? 0);
+            }
+            pedido.total = total;
+            print(
+              "Pedido ${pedido.id} → ${lineas.length} líneas → total = $total",
+            );
+          }
+        } catch (e) {
+          pedido.total = null;
+          print("⚠️ Error calculando total del pedido ${pedido.id}: $e");
+        }
+      }
+
+      return pedidos;
     } else {
       throw Exception(
         "Error al obtener pedidos del cliente (status: ${response.statusCode})",
@@ -110,7 +148,7 @@ class ApiService {
     required int idPedido,
   }) async {
     final url = Uri.parse(
-      '$baseUrl/api/vendedor/$idVendedor/cliente/$idCliente/pedido/$idPedido/linea',
+      '$baseUrl/vendedor/$idVendedor/cliente/$idCliente/pedido/$idPedido/linea',
     );
 
     final response = await http.get(
@@ -122,9 +160,10 @@ class ApiService {
       final List<dynamic> jsonList = json.decode(response.body);
       return jsonList.map((e) => LineaPedido.fromJson(e)).toList();
     } else {
-      throw Exception(
-        'Error al obtener las líneas del pedido: ${response.statusCode}',
+      print(
+        "⚠️ Error ${response.statusCode} obteniendo líneas de pedido $idPedido",
       );
+      return [];
     }
   }
 }

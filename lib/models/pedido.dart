@@ -4,7 +4,7 @@ class Pedido {
   fecha; // puedes usar DateTime si luego necesitas operaciones de fecha
   final int idCliente;
   final List<int> idLineaPedido;
-  final double? total; // opcional hasta que tu API lo devuelva
+  double? total; // opcional hasta que tu API lo devuelva
 
   Pedido({
     required this.id,

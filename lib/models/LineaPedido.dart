@@ -22,14 +22,4 @@ class LineaPedido {
       precio: (json['precio'] ?? 0).toDouble(),
     );
   }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'idPedido': idPedido,
-      'idProducto': idProducto,
-      'cantidad': cantidad,
-      'precio': precio,
-    };
-  }
 }
