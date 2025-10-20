@@ -166,4 +166,27 @@ class ApiService {
       return [];
     }
   }
+
+  Future<bool> cerrarPedido({
+    required int idVendedor,
+    required int idCliente,
+    required int idPedido,
+  }) async {
+    final url = Uri.parse(
+      '$baseUrl/vendedor/$idVendedor/cliente/$idCliente/pedido/$idPedido/cerrar',
+    );
+
+    final response = await http.put(
+      url,
+      headers: {'Content-Type': 'application/json'},
+    );
+
+    if (response.statusCode == 200) {
+      print("✅ Pedido $idPedido cerrado correctamente");
+      return true;
+    } else {
+      print("❌ Error al cerrar pedido $idPedido: ${response.statusCode}");
+      return false;
+    }
+  }
 }

@@ -11,13 +11,13 @@ import '../widgets/list/pedido_list.dart';
 class ClienteDetailPage extends StatelessWidget {
   final Cliente cliente;
   final ApiService api = ApiService();
-  final int idVendedor;
 
-  ClienteDetailPage({super.key, required this.cliente})
-    : idVendedor = SessionManager.getIdVendedro();
+  ClienteDetailPage({super.key, required this.cliente});
 
   @override
   Widget build(BuildContext context) {
+    final int idVendedor = SessionManager.getIdVendedro(); // ✅ mover aquí
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       body: SafeArea(
@@ -41,7 +41,6 @@ class ClienteDetailPage extends StatelessWidget {
                   name: vendedor.nombre,
                   avatarUrl: "https://cdn.pfps.gg/pfps/2903-default-blue.png",
                 ),
-
                 const SizedBox(height: 24),
 
                 // 🔹 Info del cliente
@@ -91,7 +90,6 @@ class ClienteDetailPage extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // 🔹 Gráfico modular
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: MonthlySalesChart(clienteId: cliente.id),
@@ -100,7 +98,7 @@ class ClienteDetailPage extends StatelessWidget {
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: PedidoList(idCliente: cliente.id),
+                    child: PedidoList(idCliente: cliente.id), // ✅ correcto
                   ),
                 ),
               ],
