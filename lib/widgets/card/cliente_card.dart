@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/cliente.dart';
+import '../../models/cliente.dart';
+import '../../pages/cliente_detail_page.dart'; // 🔹 importamos la nueva página
 
 class ClientCard extends StatelessWidget {
   final Cliente cliente;
@@ -11,7 +12,7 @@ class ClientCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: Color(0xFF2b2b2b),
+      color: const Color(0xFF2b2b2b),
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: Colors.blue,
@@ -31,7 +32,6 @@ class ClientCard extends StatelessWidget {
           "COD: ${cliente.id}",
           style: const TextStyle(color: Colors.grey, fontSize: 12),
         ),
-        // 🔹 En vez de la flecha, mostramos pedidos
         trailing: Text(
           "pedidos: ${cliente.idPedidos.length}",
           style: const TextStyle(
@@ -40,9 +40,12 @@ class ClientCard extends StatelessWidget {
           ),
         ),
         onTap: () {
-          ScaffoldMessenger.of(
+          Navigator.push(
             context,
-          ).showSnackBar(SnackBar(content: Text("Cliente: ${cliente.nombre}")));
+            MaterialPageRoute(
+              builder: (context) => ClienteDetailPage(cliente: cliente),
+            ),
+          );
         },
       ),
     );
