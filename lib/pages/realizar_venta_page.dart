@@ -1,26 +1,74 @@
 import 'package:flutter/material.dart';
-import '../widgets/custom_date_picker.dart'; // ✅ Importa el módulo reutilizable
+import '../models/cliente.dart';
+import '../models/producto.dart';
+import '../service/api_service.dart';
+import '../widgets/custom_date_picker.dart';
+import '../widgets/custom_client_selector.dart';
+import '../widgets/custom_product_selector.dart';
+import '../dto/LineaPedioDto.dart';
+import '../dto/LineaPedioDto.dart';
+import '../models/pedido.dart';
 
 class RealizarVentaPage extends StatefulWidget {
-  const RealizarVentaPage({super.key});
+  final int idVendedor;
+
+  const RealizarVentaPage({super.key, required this.idVendedor});
 
   @override
   State<RealizarVentaPage> createState() => _RealizarVentaPageState();
 }
 
 class _RealizarVentaPageState extends State<RealizarVentaPage> {
+  final ApiService api = ApiService();
+
   DateTime fechaVenta = DateTime.now();
-  String cliente = "Seleccionar";
+  Cliente? clienteSeleccionado;
   String notas = "";
-  List<String> productos = [];
+  Map<Producto, Map<String, dynamic>> productosSeleccionados = {};
+
+  bool cargandoClientes = false;
+  bool cargandoProductos = false;
+  List<Cliente> clientes = [];
+  List<Producto> productos = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarDatos();
+  }
+
+  Future<void> _cargarDatos() async {
+    setState(() {
+      cargandoClientes = true;
+      cargandoProductos = true;
+    });
+    try {
+      clientes = await api.getClientesByVendedor(widget.idVendedor);
+      productos = await api.getProductos();
+    } catch (e) {
+      debugPrint("⚠️ Error al cargar datos: $e");
+    } finally {
+      setState(() {
+        cargandoClientes = false;
+        cargandoProductos = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (cargandoClientes || cargandoProductos) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF121212),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
-      backgroundColor: const Color(0xFF121212), // 🔹 Fondo oscuro
+      backgroundColor: const Color(0xFF121212),
       appBar: AppBar(
         backgroundColor: const Color(0xFF121212),
-        foregroundColor: Colors.white, // 🔹 Flecha blanca
+        foregroundColor: Colors.white,
         elevation: 0,
         title: const Text(
           "Realizar venta",
@@ -33,7 +81,7 @@ class _RealizarVentaPageState extends State<RealizarVentaPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🔹 Selector de fecha modularizado
+            // 🔹 Fecha
             GestureDetector(
               onTap: () async {
                 DateTime? nuevaFecha = await mostrarSelectorFecha(
@@ -41,9 +89,7 @@ class _RealizarVentaPageState extends State<RealizarVentaPage> {
                   fechaInicial: fechaVenta,
                 );
                 if (nuevaFecha != null) {
-                  setState(() {
-                    fechaVenta = nuevaFecha;
-                  });
+                  setState(() => fechaVenta = nuevaFecha);
                 }
               },
               child: Row(
@@ -91,11 +137,16 @@ class _RealizarVentaPageState extends State<RealizarVentaPage> {
             // 🔹 Cliente
             _buildListItem(
               title: "Cliente",
-              value: cliente,
-              onTap: () {
-                setState(() {
-                  cliente = "Cliente Ejemplo";
-                });
+              value: clienteSeleccionado?.nombre ?? "Seleccionar",
+              onTap: () async {
+                Cliente? nuevo = await mostrarSelectorCliente(
+                  context,
+                  clientes: clientes,
+                  clienteActual: clienteSeleccionado,
+                );
+                if (nuevo != null) {
+                  setState(() => clienteSeleccionado = nuevo);
+                }
               },
             ),
 
@@ -104,20 +155,23 @@ class _RealizarVentaPageState extends State<RealizarVentaPage> {
               title: "Notas",
               value: notas.isEmpty ? "Añadir" : notas,
               onTap: () {
-                setState(() {
-                  notas = "Entrega urgente";
-                });
+                setState(() => notas = "Entrega urgente");
               },
             ),
 
             const SizedBox(height: 16),
 
-            // 🔹 Productos
+            // 🔹 Productos con cantidad y precio editable
             GestureDetector(
-              onTap: () {
-                setState(() {
-                  productos = ["Producto A", "Producto B"];
-                });
+              onTap: () async {
+                final seleccion = await mostrarSelectorProducto(
+                  context,
+                  productos: productos,
+                );
+
+                if (seleccion != null) {
+                  setState(() => productosSeleccionados = seleccion);
+                }
               },
               child: Container(
                 width: double.infinity,
@@ -127,6 +181,7 @@ class _RealizarVentaPageState extends State<RealizarVentaPage> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -141,7 +196,7 @@ class _RealizarVentaPageState extends State<RealizarVentaPage> {
                         Row(
                           children: [
                             Text(
-                              productos.length.toString(),
+                              productosSeleccionados.length.toString(),
                               style: const TextStyle(color: Colors.white54),
                             ),
                             const Icon(
@@ -152,15 +207,33 @@ class _RealizarVentaPageState extends State<RealizarVentaPage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
-                    const Icon(Icons.inventory_2, color: Colors.grey, size: 48),
-                    const SizedBox(height: 8),
-                    Text(
-                      productos.isEmpty
-                          ? "Seleccionar productos"
-                          : productos.join(", "),
-                      style: const TextStyle(color: Colors.white60),
-                    ),
+                    const SizedBox(height: 16),
+
+                    if (productosSeleccionados.isEmpty)
+                      const Text(
+                        "Seleccionar productos",
+                        style: TextStyle(color: Colors.white60),
+                      )
+                    else
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: productosSeleccionados.entries.map((e) {
+                          final producto = e.key;
+                          final cantidad = e.value['cantidad'] as int;
+                          final precio = e.value['precio'] as double;
+                          final total = cantidad * precio;
+
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Text(
+                              "${producto.descripcion} x$cantidad → "
+                              "${precio.toStringAsFixed(2)} € c/u = "
+                              "${total.toStringAsFixed(2)} €",
+                              style: const TextStyle(color: Colors.white70),
+                            ),
+                          );
+                        }).toList(),
+                      ),
                   ],
                 ),
               ),
@@ -180,13 +253,7 @@ class _RealizarVentaPageState extends State<RealizarVentaPage> {
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Venta guardada correctamente 💾"),
-                    ),
-                  );
-                },
+                onPressed: _guardarVenta,
                 child: const Text(
                   "Guardar",
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
@@ -199,7 +266,108 @@ class _RealizarVentaPageState extends State<RealizarVentaPage> {
     );
   }
 
-  /// 🔸 Método auxiliar para crear filas tipo "Cliente", "Notas", etc.
+  /// 🔹 Guardar la venta (validación y confirmación)
+  Future<void> _guardarVenta() async {
+    if (clienteSeleccionado == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Selecciona un cliente antes de guardar ⚠️"),
+        ),
+      );
+      return;
+    }
+
+    if (productosSeleccionados.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Selecciona al menos un producto ⚠️")),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text("Creando pedido... ⏳")));
+
+    try {
+      // 🔹 Paso 1: Crear pedido
+      Pedido pedido = await api.crearPedido(
+        idVendedor: widget.idVendedor,
+        idCliente: clienteSeleccionado!.id,
+      );
+
+      int idPedido = pedido.id;
+
+      // 🔹 Paso 2: Si la fecha difiere, actualizarla
+      final hoy = DateTime.now();
+      final mismaFecha =
+          fechaVenta.year == hoy.year &&
+          fechaVenta.month == hoy.month &&
+          fechaVenta.day == hoy.day;
+
+      if (!mismaFecha) {
+        pedido = await api.actualizarFechaPedido(
+          idVendedor: widget.idVendedor,
+          idCliente: clienteSeleccionado!.id,
+          idPedido: idPedido,
+          fecha: fechaVenta,
+        );
+        idPedido = pedido.id;
+        debugPrint("📅 Pedido actualizado con fecha ${pedido.fecha}");
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Añadiendo líneas de pedido... 📦")),
+      );
+
+      // 🔹 Paso 3: Añadir líneas una a una
+      for (var entry in productosSeleccionados.entries) {
+        final producto = entry.key;
+        final cantidad = entry.value['cantidad'] as int;
+        final precio = entry.value['precio'] as double;
+
+        final linea = LineaPedidoDto(
+          idProducto: producto.id,
+          cantidad: cantidad,
+          precio: precio,
+        );
+
+        final status = await api.addLineaPedido(
+          idVendedor: widget.idVendedor,
+          idCliente: clienteSeleccionado!.id,
+          idPedido: idPedido,
+          linea: linea,
+        );
+
+        if (status != 200 && status != 201) {
+          throw Exception(
+            "Error al guardar línea del producto ${producto.descripcion}",
+          );
+        }
+
+        debugPrint("✅ Línea guardada: ${linea.toString()}");
+      }
+      // 🔹 Pedido completado
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Pedido #$idPedido guardado correctamente ✅"),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+
+      // 🔹 Esperamos un momento y volvemos atrás
+      await Future.delayed(const Duration(seconds: 2));
+      if (context.mounted) {
+        Navigator.pop(context, true); // ← Devuelve “true” para indicar éxito
+      }
+    } catch (e) {
+      debugPrint("❌ Error al guardar venta: $e");
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error al guardar venta: $e")));
+    }
+  }
+
+  /// 🔹 Widget genérico para filas de selección (cliente, notas, etc.)
   Widget _buildListItem({
     required String title,
     required String value,

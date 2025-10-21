@@ -7,6 +7,7 @@ import '../models/vendedor.dart';
 import '../models/cliente.dart';
 import '../utils/session_manager.dart';
 import '../models/LineaPedido.dart';
+import '../dto/LineaPedioDto.dart';
 
 class ApiService {
   // 🔹 URL base de tu backend (ajústala a tu servidor)
@@ -226,5 +227,70 @@ class ApiService {
       print("⚠️ Error al obtener PDF: $e");
       return null;
     }
+  }
+
+  /// 🔹 Crear pedido (fecha actual)
+  Future<Pedido> crearPedido({
+    required int idVendedor,
+    required int idCliente,
+  }) async {
+    final url = Uri.parse(
+      "$baseUrl/vendedor/$idVendedor/cliente/$idCliente/pedido",
+    );
+
+    final response = await http.post(url);
+
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      final body = jsonDecode(response.body);
+      return Pedido.fromJson(body);
+    } else {
+      throw Exception(
+        "Error al crear pedido: ${response.statusCode} ${response.body}",
+      );
+    }
+  }
+
+  /// 🔹 Actualizar fecha del pedido si difiere de la actual
+  Future<Pedido> actualizarFechaPedido({
+    required int idVendedor,
+    required int idCliente,
+    required int idPedido,
+    required DateTime fecha,
+  }) async {
+    final fechaStr = fecha.toIso8601String().split('T')[0];
+    final url = Uri.parse(
+      "$baseUrl/vendedor/$idVendedor/cliente/$idCliente/pedido/$idPedido?fecha=$fechaStr",
+    );
+
+    final response = await http.put(url);
+
+    if (response.statusCode == 200) {
+      final body = jsonDecode(response.body);
+      return Pedido.fromJson(body);
+    } else {
+      throw Exception(
+        "Error al actualizar fecha: ${response.statusCode} ${response.body}",
+      );
+    }
+  }
+
+  /// 🔹 Añadir línea individual al pedido
+  Future<int> addLineaPedido({
+    required int idVendedor,
+    required int idCliente,
+    required int idPedido,
+    required LineaPedidoDto linea,
+  }) async {
+    final url = Uri.parse(
+      "$baseUrl/vendedor/$idVendedor/cliente/$idCliente/pedido/$idPedido/linea",
+    );
+
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode(linea.toJson()),
+    );
+
+    return response.statusCode;
   }
 }
