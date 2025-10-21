@@ -10,6 +10,10 @@ class PedidoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print(
+      "Construyendo card para pedido ${pedido.id} del cliente ${pedido.idCliente}",
+    );
+
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: () {

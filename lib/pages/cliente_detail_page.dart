@@ -7,6 +7,7 @@ import '../utils/session_manager.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/charts/monthly_sales_chart.dart';
 import '../widgets/list/pedido_list.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 class ClienteDetailPage extends StatelessWidget {
   final Cliente cliente;

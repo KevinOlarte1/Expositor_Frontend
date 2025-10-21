@@ -8,6 +8,7 @@ import '../widgets/custom_app_bar.dart';
 import '../widgets/stats_card.dart';
 import '../widgets/button/custom_action_button.dart';
 import '../widgets/card/cliente_card.dart';
+import '../pages/realizar_venta_page.dart';
 import '../utils/session_manager.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -71,9 +72,10 @@ class _DashboardPageState extends State<DashboardPage> {
                     text: "Realizar venta",
                     icon: Icons.shopping_cart_checkout,
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Acción: Realizar venta 🚀"),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => RealizarVentaPage(),
                         ),
                       );
                     },

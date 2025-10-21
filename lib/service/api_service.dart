@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:mi_app/models/pedido.dart';
 import '../models/producto.dart';
@@ -158,6 +159,15 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final List<dynamic> jsonList = json.decode(response.body);
+      //Pruebas imprimir la lista de lineas pedido
+      print("idCliente: $idCliente, idPedido: $idPedido");
+
+      // 🧩 Debug: imprimir cada línea recibida
+      print("✅ Respuesta correcta: ${jsonList.length} líneas encontradas");
+      for (var i = 0; i < jsonList.length; i++) {
+        print("— Línea #$i → ${jsonList[i]}");
+      }
+
       return jsonList.map((e) => LineaPedido.fromJson(e)).toList();
     } else {
       print(
@@ -187,6 +197,34 @@ class ApiService {
     } else {
       print("❌ Error al cerrar pedido $idPedido: ${response.statusCode}");
       return false;
+    }
+  }
+
+  /// 🔹 Obtiene el PDF de un pedido en bytes (sin guardarlo ni abrirlo)
+  Future<Uint8List?> fetchPedidoPdf({
+    required int idVendedor,
+    required int idCliente,
+    required int idPedido,
+  }) async {
+    final url = Uri.parse(
+      '$baseUrl/vendedor/$idVendedor/cliente/$idCliente/pedido/$idPedido/pdf',
+    );
+
+    try {
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        print("✅ PDF obtenido correctamente para pedido $idPedido");
+        return response.bodyBytes;
+      } else {
+        print(
+          "❌ Error ${response.statusCode} al obtener PDF del pedido $idPedido",
+        );
+        return null;
+      }
+    } catch (e) {
+      print("⚠️ Error al obtener PDF: $e");
+      return null;
     }
   }
 }
