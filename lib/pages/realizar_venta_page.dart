@@ -354,8 +354,6 @@ class _RealizarVentaPageState extends State<RealizarVentaPage> {
         ),
       );
 
-      // 🔹 Esperamos un momento y volvemos atrás
-      await Future.delayed(const Duration(seconds: 2));
       if (context.mounted) {
         Navigator.pop(context, true); // ← Devuelve “true” para indicar éxito
       }

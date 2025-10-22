@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../models/cliente.dart';
 import '../service/api_service.dart';
 
 class AddClientePage extends StatelessWidget {

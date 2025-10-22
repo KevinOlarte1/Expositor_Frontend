@@ -71,14 +71,20 @@ class _DashboardPageState extends State<DashboardPage> {
                   child: CustomActionButton(
                     text: "Realizar venta",
                     icon: Icons.shopping_cart_checkout,
-                    onPressed: () {
-                      Navigator.push(
+                    onPressed: () async {
+                      // Esperamos a que termine la creación del pedido
+                      final result = await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) =>
                               RealizarVentaPage(idVendedor: idVendedor),
                         ),
                       );
+
+                      // Si se creó un pedido, recargamos la lista de clientes
+                      if (result == true) {
+                        clienteListKey.currentState?.recargarClientes();
+                      }
                     },
                   ),
                 ),

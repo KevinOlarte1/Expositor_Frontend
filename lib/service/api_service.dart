@@ -6,7 +6,7 @@ import '../models/producto.dart';
 import '../models/vendedor.dart';
 import '../models/cliente.dart';
 import '../utils/session_manager.dart';
-import '../models/LineaPedido.dart';
+import '../models/linea_pedido.dart';
 import '../dto/LineaPedioDto.dart';
 
 class ApiService {
@@ -292,5 +292,30 @@ class ApiService {
     );
 
     return response.statusCode;
+  }
+
+  /// 🔹 Eliminar una línea de pedido específica
+  Future<bool> deleteLineaPedido({
+    required int idVendedor,
+    required int idCliente,
+    required int idPedido,
+    required int idLinea,
+  }) async {
+    final url = Uri.parse(
+      "$baseUrl/vendedor/$idVendedor/cliente/$idCliente/pedido/$idPedido/linea/$idLinea",
+    );
+
+    final response = await http.delete(
+      url,
+      headers: {"Content-Type": "application/json"},
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 204) {
+      print("🗑️ Línea $idLinea eliminada correctamente del pedido $idPedido");
+      return true;
+    } else {
+      print("❌ Error al eliminar línea $idLinea → ${response.statusCode}");
+      return false;
+    }
   }
 }

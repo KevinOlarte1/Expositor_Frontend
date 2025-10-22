@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../models/LineaPedido.dart';
+import '../../models/linea_pedido.dart';
 
 /// Widget reutilizable para mostrar una línea de pedido
 class LineaPedidoCard extends StatelessWidget {
   final LineaPedido linea;
+  final Function(int idLinea)? onDelete; // 🔹 callback opcional
 
-  const LineaPedidoCard({super.key, required this.linea});
+  const LineaPedidoCard({super.key, required this.linea, this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -64,13 +65,26 @@ class LineaPedidoCard extends StatelessWidget {
             ],
           ),
         ),
-        trailing: Text(
-          "\$${(linea.precio * linea.cantidad).toStringAsFixed(2)}",
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-            color: Colors.blueAccent,
-          ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "\$${(linea.precio * linea.cantidad).toStringAsFixed(2)}",
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: Colors.blueAccent,
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.grey),
+              tooltip: "Eliminar línea",
+              onPressed: () {
+                if (onDelete != null) onDelete!(linea.id);
+              },
+            ),
+          ],
         ),
       ),
     );

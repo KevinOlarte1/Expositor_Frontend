@@ -1,3 +1,6 @@
+import '../service/api_service.dart';
+import 'linea_pedido.dart';
+
 class Pedido {
   final int id;
   final String
@@ -38,6 +41,26 @@ class Pedido {
       'idLineaPedido': idLineaPedido,
       if (total != null) 'total': total,
     };
+  }
+
+  /// 🔹 Calcula el total obteniendo las líneas de la API
+  Future<double> calcularTotalDesdeApi(int idVendedor) async {
+    final api = ApiService();
+    double suma = 0.0;
+
+    // Obtenemos las líneas asociadas al pedido
+    final lineas = await api.getLineasPedido(
+      idVendedor: idVendedor,
+      idCliente: idCliente,
+      idPedido: id,
+    );
+
+    for (var linea in lineas) {
+      suma += (linea.precio * linea.cantidad);
+    }
+
+    total = suma;
+    return suma;
   }
 
   /// 🔹 Método útil para debug o logs

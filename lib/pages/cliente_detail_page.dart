@@ -6,8 +6,9 @@ import '../service/api_service.dart';
 import '../utils/session_manager.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/charts/monthly_sales_chart.dart';
-import '../widgets/list/pedido_list.dart';
-import 'package:intl/date_symbol_data_local.dart';
+import '../pages/pedido_detail_page.dart';
+import '../widgets/card/pedido_card.dart';
+import '../models/pedido.dart';
 
 class ClienteDetailPage extends StatelessWidget {
   final Cliente cliente;
@@ -107,6 +108,86 @@ class ClienteDetailPage extends StatelessWidget {
           },
         ),
       ),
+    );
+  }
+}
+
+class PedidoList extends StatefulWidget {
+  final int idCliente;
+
+  const PedidoList({super.key, required this.idCliente});
+
+  @override
+  State<PedidoList> createState() => _PedidoListState();
+}
+
+class _PedidoListState extends State<PedidoList> {
+  final ApiService api = ApiService();
+  late Future<List<Pedido>> pedidosFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    pedidosFuture = _cargarPedidos();
+  }
+
+  Future<List<Pedido>> _cargarPedidos() async {
+    return await api.getPedidosByCliente(widget.idCliente);
+  }
+
+  Future<void> _refrescarPedidos() async {
+    final nuevosPedidos = await api.getPedidosByCliente(widget.idCliente);
+    setState(() {
+      pedidosFuture = Future.value(
+        nuevosPedidos,
+      ); // 🔹 fuerza rebuild inmediato
+    });
+  }
+
+  /// 🔹 Abrir la página de detalle del pedido
+  Future<void> _abrirPedidoDetalle(Pedido pedido) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => PedidoDetailPage(pedido: pedido)),
+    );
+
+    if (result == true) {
+      await _refrescarPedidos(); // 🔹 fuerza recarga real
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Pedido>>(
+      future: pedidosFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text("Error: ${snapshot.error}"));
+        }
+
+        final pedidos = snapshot.data ?? [];
+
+        if (pedidos.isEmpty) {
+          return const Center(child: Text("No hay pedidos registrados."));
+        }
+
+        return RefreshIndicator(
+          onRefresh: _refrescarPedidos,
+          child: ListView.builder(
+            itemCount: pedidos.length,
+            itemBuilder: (context, index) {
+              final pedido = pedidos[index];
+
+              return GestureDetector(
+                onTap: () => _abrirPedidoDetalle(pedido),
+                child: PedidoCard(pedido: pedido),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }

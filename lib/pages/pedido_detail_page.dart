@@ -5,7 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../models/pedido.dart';
-import '../../models/LineaPedido.dart';
+import '../../models/linea_pedido.dart';
+import '../../dto/LineaPedioDto.dart';
 import '../../service/api_service.dart';
 import '../../utils/session_manager.dart';
 import '../../widgets/card/linea_pedido_card.dart';
@@ -24,19 +25,91 @@ class PedidoDetailPage extends StatefulWidget {
 class _PedidoDetailPageState extends State<PedidoDetailPage> {
   final ApiService api = ApiService();
   late Future<List<LineaPedido>> lineasFuture;
+  List<LineaPedido> lineas = [];
+
   late int idVendedor;
-  Uint8List? pdfBytes; // 🔹 Guardamos el PDF si existe
-  String? localPdfPath; // 🔹 Ruta local para el PDF preview
+  Uint8List? pdfBytes;
+  String? localPdfPath;
+  bool huboCambios = false; // 🔹 indica si algo cambió (eliminación o cierre)
 
   @override
   void initState() {
     super.initState();
     idVendedor = SessionManager.getIdVendedro();
-    lineasFuture = api.getLineasPedido(
+    lineasFuture = _cargarLineas();
+  }
+
+  Future<List<LineaPedido>> _cargarLineas() async {
+    final data = await api.getLineasPedido(
       idVendedor: idVendedor,
       idCliente: widget.pedido.idCliente,
       idPedido: widget.pedido.id,
     );
+    setState(() => lineas = data);
+    return data;
+  }
+
+  /// 🔹 Eliminar línea directamente en la API
+  Future<void> _eliminarLinea(int idLinea) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Eliminar línea"),
+        content: const Text(
+          "¿Seguro que deseas eliminar esta línea del pedido?",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Cancelar"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Eliminar", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    final success = await api.deleteLineaPedido(
+      idVendedor: idVendedor,
+      idCliente: widget.pedido.idCliente,
+      idPedido: widget.pedido.id,
+      idLinea: idLinea,
+    );
+
+    if (success) {
+      setState(() {
+        lineas.removeWhere((l) => l.id == idLinea);
+        huboCambios = true;
+      });
+
+      // 🔹 recalcular total del pedido usando el modelo
+      final nuevoTotal = await widget.pedido.calcularTotalDesdeApi(idVendedor);
+      setState(() => widget.pedido.total = nuevoTotal);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Línea eliminada correctamente ✅"),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Error al eliminar la línea ❌"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  /// 🔹 Detectar si al salir hubo cambios (para refrescar en la lista)
+  Future<bool> _onWillPop() async {
+    Navigator.pop(context, huboCambios);
+    return false;
   }
 
   Future<void> _loadPdf() async {
@@ -79,144 +152,157 @@ class _PedidoDetailPageState extends State<PedidoDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF6F6F6),
-      appBar: AppBar(
-        title: Text(
-          'Detalle del Pedido',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF6F6F6),
+        appBar: AppBar(
+          title: Text(
+            'Detalle del Pedido',
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
           ),
+          backgroundColor: Colors.black87,
+          iconTheme: const IconThemeData(color: Colors.white),
         ),
-        backgroundColor: Colors.black87,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: FutureBuilder<List<LineaPedido>>(
-        future: lineasFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
+        body: FutureBuilder<List<LineaPedido>>(
+          future: lineasFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            }
 
-          final lineas = snapshot.data ?? [];
-
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              HeaderRow(label: "Fecha del pedido", value: widget.pedido.fecha),
-              const Divider(),
-              HeaderRow(
-                label: "Cliente",
-                value: "ID: ${widget.pedido.idCliente}",
-              ),
-              const Divider(),
-              HeaderRow(label: "Notas", value: "—"),
-              const Divider(),
-              const SizedBox(height: 8),
-
-              if (lineas.isEmpty)
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 40),
-                    child: Text(
-                      "No hay productos en este pedido",
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
-                      ),
+            if (lineas.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  child: Text(
+                    "No hay productos en este pedido",
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                )
-              else
-                ...lineas.map((linea) => LineaPedidoCard(linea: linea)),
+                ),
+              );
+            }
 
-              const SizedBox(height: 24),
+            return ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                HeaderRow(
+                  label: "Fecha del pedido",
+                  value: widget.pedido.fecha,
+                ),
+                const Divider(),
+                HeaderRow(
+                  label: "Cliente",
+                  value: "ID: ${widget.pedido.idCliente}",
+                ),
+                const Divider(),
+                HeaderRow(label: "Notas", value: "—"),
+                const Divider(),
 
-              CerrarPedidoButton(
-                idVendedor: idVendedor,
-                idCliente: widget.pedido.idCliente,
-                idPedido: widget.pedido.id,
-                api: api,
-                onClosed: () => Navigator.pop(context),
-              ),
-
-              const SizedBox(height: 20),
-
-              // 🔹 Botón para cargar el PDF (preview)
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blueAccent,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 14,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 16),
+                ...lineas.map(
+                  (linea) => LineaPedidoCard(
+                    linea: linea,
+                    onDelete: (id) => _eliminarLinea(id),
                   ),
                 ),
-                icon: const Icon(
-                  Icons.picture_as_pdf,
-                  color: Colors.white,
-                  size: 20,
+
+                const SizedBox(height: 24),
+
+                // 🔹 Botón cerrar pedido
+                CerrarPedidoButton(
+                  idVendedor: idVendedor,
+                  idCliente: widget.pedido.idCliente,
+                  idPedido: widget.pedido.id,
+                  api: api,
+                  onClosed: () async {
+                    huboCambios = true;
+                    final nuevoTotal = await widget.pedido
+                        .calcularTotalDesdeApi(idVendedor);
+                    setState(() => widget.pedido.total = nuevoTotal);
+                    Navigator.pop(context, true);
+                  },
                 ),
-                label: Text(
-                  "Ver PDF del pedido",
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueAccent,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: const Icon(
+                    Icons.picture_as_pdf,
                     color: Colors.white,
+                    size: 20,
                   ),
-                ),
-                onPressed: _loadPdf,
-              ),
-
-              const SizedBox(height: 20),
-
-              if (localPdfPath != null)
-                Column(
-                  children: [
-                    Container(
-                      height: 400,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.black26),
-                      ),
-                      child: PDFView(
-                        filePath: localPdfPath!,
-                        enableSwipe: true,
-                        autoSpacing: false,
-                        swipeHorizontal: true,
-                      ),
+                  label: Text(
+                    "Ver PDF del pedido",
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
                     ),
-                    const SizedBox(height: 12),
-                    ElevatedButton.icon(
-                      onPressed: _downloadPdf,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 14,
-                        ),
-                        shape: RoundedRectangleBorder(
+                  ),
+                  onPressed: _loadPdf,
+                ),
+                const SizedBox(height: 20),
+                if (localPdfPath != null)
+                  Column(
+                    children: [
+                      Container(
+                        height: 400,
+                        decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.black26),
+                        ),
+                        child: PDFView(
+                          filePath: localPdfPath!,
+                          enableSwipe: true,
+                          autoSpacing: false,
+                          swipeHorizontal: true,
                         ),
                       ),
-                      icon: const Icon(
-                        Icons.download,
-                        color: Colors.white,
-                        size: 20,
+                      const SizedBox(height: 12),
+                      ElevatedButton.icon(
+                        onPressed: _downloadPdf,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 14,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        icon: const Icon(
+                          Icons.download,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        label: const Text("Descargar PDF"),
                       ),
-                      label: const Text("Descargar PDF"),
-                    ),
-                  ],
-                ),
-            ],
-          );
-        },
+                    ],
+                  ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
